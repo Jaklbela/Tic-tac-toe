@@ -1,0 +1,13 @@
+#gameBoard {
+    width: 40vw;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 100px;
+    margin-top: 40px;
+}
+.cell {
+    width: 100px;
+    height: 100px;
+    border: 1px solid black;
+    display: inline-block;
+}
