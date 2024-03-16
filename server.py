@@ -1,53 +1,54 @@
-from flask import Flask, request, abort, render_template
-from collections import namedtuple
+import time
+from flask import Flask, render_template, session, redirect, url_for
+from flask_session import Session
+from redis import Redis
+from tempfile import mkdtemp
 
 app = Flask(__name__)
 
-Game = namedtuple('Game', ['board', 'next_turn', 'scores'])
-games = {}
+app.config["SESSION_FILE_DIR"] = mkdtemp()
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_TYPE"] = "filesystem"
+Session(app)
+
+redis = Redis()
 
 
 @app.route('/')
-def home():
-    return render_template('web.html')
+def draw():
+    if "board" not in session:
+        session["board"] = [None] * 9
+        session["turn"] = 'X'
+        session["scores"] = {'X': 0, 'O': 0}
+
+    session['last_seen'] = time.time()
+
+    return render_template("web.html", game=session["board"], turn=session["turn"], score=session["scores"])
 
 
-@app.route('/new_game', methods=['POST'])
+@app.route('/make_move/<int:index>')
+def make_move(index):
+    session["board"][index] = session["turn"]
+
+    if check_win(session["board"], index):
+        session["scores"][session["turn"]] += 1
+        session["board"] = [None] * 9
+    else:
+        if session["turn"] == 'X':
+            session["turn"] = 'O'
+        else:
+            session["turn"] = 'X'
+
+    return redirect(url_for("draw"))
+
+
+@app.route('/new_game')
 def new_game():
-    game_id = str(len(games) + 1)
-    games[game_id] = Game(board=[None] * 9, next_turn='X', scores={'X': 0, 'O': 0})
-    return game_id
+    session["board"] = [None] * 9
+    session["turn"] = 'X'
+    session["scores"] = {'X': 0, 'O': 0}
 
-
-@app.route('/make_move', methods=['POST'])
-def make_move():
-    game_id = request.json['game_id']
-    player = request.json['player']
-    position = request.json['position']
-
-    if game_id not in games:
-        abort(404)
-
-    game = games[game_id]
-
-    if game.board[position] is not None:
-        abort(400, 'Invalid move')
-
-    if game.next_turn != player:
-        abort(400, 'Not your turn')
-
-    board = game.board[:]
-    board[position] = player
-    next_turn = 'O' if player == 'X' else 'X'
-    scores = game.scores.copy()
-
-    if check_win(board, position):
-        scores[player] += 1
-        board = [None] * 9
-
-    games[game_id] = Game(board=board, next_turn=next_turn, scores=scores)
-
-    return {'board': board, 'next_turn': next_turn, 'scores': scores}
+    return redirect(url_for("draw"))
 
 
 def check_win(board, last_move):
@@ -62,6 +63,13 @@ def check_win(board, last_move):
         if all(map(lambda pos: board[pos] == player, combination)):
             return True
     return False
+
+
+@app.before_request
+def check_timeout():
+    last_seen = session.get('last_seen')
+    if last_seen and time.time() - last_seen > 30:
+        session.clear()
 
 
 if __name__ == '__main__':

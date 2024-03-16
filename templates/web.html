@@ -1,13 +1,29 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-    <link rel="stylesheet" type="text/css" href="../static/styles.css">
-    <title>Поле</title>
-</head>
-<body>
-    <h1>Крестики-нолики</h1>
-    <div id="gameBoard"></div>
-    <button onclick="newGame()">Новая игра</button>
-    <script src="../static/client.js"></script>
-</body>
+    <head>
+        <link rel="stylesheet" type="text/css" href="../static/styles.css">
+        <title>Поле</title>
+    </head>
+    <body>
+        <h1>Крестики-нолики</h1>
+        <div id="gameBoard">
+            <table>
+                {% for row in range(0, 9, 3) %}
+                    <tr>
+                        {% for i in range(row, row+3) %}
+                            <td class="cell">
+                                {% if game[i] %}
+                                    {{ game[i] }}
+                                {% else %}
+                                    <a href="../{{url_for('make_move', index=i)}}" style="font-size: 15px;">Ход {{turn}}</a>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <a href="../{{url_for('new_game')}}" style="text-decoration: none;">Новая игра</a>
+        <p style="font-size: medium;">Очки: X: {{score['X']}} O: {{score['O']}}</p>
+    </body>
 </html>

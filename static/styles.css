@@ -1,5 +1,5 @@
 #gameBoard {
-    width: 40vw;
+    width: 400px;
     display: flex;
     flex-wrap: wrap;
     font-size: 100px;
